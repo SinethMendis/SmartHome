@@ -14,17 +14,28 @@ import androidx.navigation.compose.rememberNavController
 import com.example.smarthome.data.FirestoreRepository
 import com.example.smarthome.ui.SmartHomeNavGraph
 import com.example.smarthome.ui.theme.SmartHomeTheme
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.tasks.await
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
-        // Seed database
-        val repository = FirestoreRepository(FirebaseFirestore.getInstance())
+        // Ensure user is authenticated anonymously and seed database
         lifecycleScope.launch {
-            repository.seedDatabase()
+            try {
+                if (FirebaseAuth.getInstance().currentUser == null) {
+                    FirebaseAuth.getInstance().signInAnonymously().await()
+                }
+                
+                val repository = FirestoreRepository(FirebaseFirestore.getInstance())
+                repository.seedDatabase()
+            } catch (e: Exception) {
+                // Log or handle authentication/seeding error
+                e.printStackTrace()
+            }
         }
 
         enableEdgeToEdge()
