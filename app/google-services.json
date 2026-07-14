@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1024020432662",
+    "project_id": "smart-home-monitor-c8015",
+    "storage_bucket": "smart-home-monitor-c8015.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1024020432662:android:3b2482db1bb3724b84b237",
+        "android_client_info": {
+          "package_name": "com.example.smarthome"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBd3o3Sb8QMu1tf8FwKrqCm0MmoSGZP1EE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
