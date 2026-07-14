@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">Smart Home</string>
+    <string name="home_title">Home</string>
+    <string name="floor_dashboard_title">Floor Dashboard</string>
+    <string name="device_detail_title">Device Detail</string>
+    <string name="alerts_usage_title">Alerts &amp; Usage</string>
+    <string name="add_floor_plan">Add floor plan</string>
+</resources>
