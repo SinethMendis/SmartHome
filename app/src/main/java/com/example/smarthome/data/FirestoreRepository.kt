@@ -18,9 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class FirestoreRepository(private val db: FirebaseFirestore) {
-
-    private val houseId = "main-house"
+class FirestoreRepository(private val db: FirebaseFirestore, private val houseId: String) {
 
     fun getHouse(): Flow<House?> = callbackFlow {
         val listener = db.collection("houses").document(houseId)
@@ -227,11 +225,18 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
         val houses = db.collection("houses")
         
         // Check if data already exists to make it "one-time"
-        val existing = houses.limit(1).get().await()
-        if (!existing.isEmpty) return
+        // val existing = houses.limit(1).get().await()
+        // if (!existing.isEmpty) return
 
-        val houseId = "main-house"
+        //val houseId = "main-house"
         val houseRef = houses.document(houseId)
+
+        val existingHouse = houseRef.get().await()
+
+        if (existingHouse.exists()) {
+            return
+        }
+
         houseRef.set(HouseDto(name = "My Smart Home")).await()
 
         val floors = houseRef.collection("floors")
