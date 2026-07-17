@@ -166,7 +166,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
                 name = name,
                 gridWidth = gridWidth,
                 gridHeight = gridHeight,
-                imageUrl = imageUrl
+                imageUrl = "https://drive.google.com/uc?export=view&id=1enLvnJDUcAdRDnBI-FDkOwmVuqEouj74"
             )
         ).await()
     }
