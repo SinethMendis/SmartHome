@@ -171,6 +171,14 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         ).await()
     }
 
+    suspend fun addDevice(floorId: String, device: DeviceDto) {
+        db.collection("houses").document(houseId)
+            .collection("floors").document(floorId)
+            .collection("devices")
+            .add(device)
+            .await()
+    }
+
     suspend fun updateDeviceState(floorId: String, deviceId: String, state: String) {
         val deviceRef = db.collection("houses").document(houseId)
             .collection("floors").document(floorId)
@@ -309,7 +317,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             state = "ON",
             positionX = 0.0,
             positionY = 0.1,
-            cameraUri = "https://example.com/camera_snapshot.jpg"
+            cameraUri = "https://drive.google.com/uc?export=view&id=11WyoP0WqxeSJ4jDIQ1W75ISEif5VQepE"
         )).await()
 
         // Seed Usage Logs
