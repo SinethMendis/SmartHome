@@ -315,7 +315,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             name = "Front Door Camera",
             type = "camera",
             state = "ON",
-            positionX = 0.0,
+            positionX = 0.3,
             positionY = 0.1,
             cameraUri = "https://drive.google.com/uc?export=view&id=11WyoP0WqxeSJ4jDIQ1W75ISEif5VQepE"
         )).await()

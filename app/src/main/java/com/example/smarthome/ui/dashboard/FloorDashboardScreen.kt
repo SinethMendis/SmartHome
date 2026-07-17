@@ -404,7 +404,7 @@ fun DeviceRow(device: Device, onClick: () -> Unit) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = color,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -413,7 +413,7 @@ fun DeviceRow(device: Device, onClick: () -> Unit) {
                 Text(
                     text = device.state.name,
                     style = MaterialTheme.typography.bodySmall,
-                    color = color,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
