@@ -1,5 +1,6 @@
 package com.example.smarthome.ui.dashboard
 
+import android.util.Log
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -23,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.smarthome.R
 import com.example.smarthome.SmartHomeApplication
 import com.example.smarthome.domain.Device
@@ -105,23 +107,57 @@ fun FloorPlanGrid(
     onDeviceClick: (Device) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    var imageLoaded by remember { mutableStateOf(false) }
+
     BoxWithConstraints(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
-        AsyncImage(
+        SubcomposeAsyncImage(
             model = floor.imageUrl,
             contentDescription = "Floor Plan",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
+            contentScale = ContentScale.Fit,
 
-        devices.forEach { device ->
-            DevicePin(
-                device = device,
-                onClick = { onDeviceClick(device) },
-                modifier = Modifier.offset(
-                    x = maxWidth * device.position.x - 20.dp,
-                    y = maxHeight * device.position.y - 20.dp
-                )
+            onSuccess = {
+                imageLoaded = true
+            },
+
+            onError = {
+                imageLoaded = false
+            },
+
+            loading = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                }
+            },
+
+            error = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Failed to load floor plan")
+                }
+            }
             )
+        Log.d("MyDebug", "image URL: ${floor.imageUrl}")
+        if (imageLoaded) {
+            devices.forEach { device ->
+                DevicePin(
+                    device = device,
+                    onClick = { onDeviceClick(device) },
+                    modifier = Modifier.offset(
+                        x = maxWidth * device.position.x - 20.dp,
+                        y = maxHeight * device.position.y - 20.dp
+                    )
+                )
+            }
         }
     }
 }

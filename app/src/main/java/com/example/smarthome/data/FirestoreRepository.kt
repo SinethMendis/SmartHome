@@ -247,7 +247,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             name = "Ground Floor",
             gridWidth = 10,
             gridHeight = 10,
-            imageUrl = "https://example.com/ground_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=14dM25N1Z4rDP30uVahuYEKj8ND_nuvnb"
         )).await()
 
         val groundDevices = groundFloorRef.collection("devices")
@@ -277,7 +277,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             name = "First Floor",
             gridWidth = 10,
             gridHeight = 8,
-            imageUrl = "https://example.com/first_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=1i-o7LUzGsFtGHL8lBc3RPxAVgiL5x9V7"
         )).await()
 
         val firstDevices = firstFloorRef.collection("devices")
