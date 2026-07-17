@@ -7,17 +7,38 @@ import androidx.lifecycle.viewmodel.initializer
 import androidx.lifecycle.viewmodel.viewModelFactory
 import com.example.smarthome.SmartHomeApplication
 import com.example.smarthome.data.FirestoreRepository
+import com.example.smarthome.domain.DeviceState
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class HomeViewModel(private val repository: FirestoreRepository) : ViewModel() {
 
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
     val uiState: StateFlow<HomeUiState> = repository.getFloors()
-        .map { floors -> HomeUiState.Success(floors) as HomeUiState }
+        .flatMapLatest { floors ->
+            if (floors.isEmpty()) {
+                flowOf(HomeUiState.Success(emptyList()))
+            } else {
+                val floorFlows = floors.map { floor ->
+                    repository.getDevices(floor.id).map { devices ->
+                        floor.copy(
+                            deviceCount = devices.size,
+                            activeDeviceCount = devices.count { it.state == DeviceState.ON }
+                        )
+                    }
+                }
+                combine(floorFlows) { updatedFloors ->
+                    HomeUiState.Success(updatedFloors.toList()) as HomeUiState
+                }
+            }
+        }
         .catch { e -> emit(HomeUiState.Error(e.message ?: "Unknown error")) }
         .stateIn(
             scope = viewModelScope,

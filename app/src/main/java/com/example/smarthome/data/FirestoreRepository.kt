@@ -18,9 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class FirestoreRepository(private val db: FirebaseFirestore) {
-
-    private val houseId = "main-house"
+class FirestoreRepository(private val db: FirebaseFirestore, private val houseId: String) {
 
     fun getHouse(): Flow<House?> = callbackFlow {
         val listener = db.collection("houses").document(houseId)
@@ -168,9 +166,17 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
                 name = name,
                 gridWidth = gridWidth,
                 gridHeight = gridHeight,
-                imageUrl = imageUrl
+                imageUrl = "https://drive.google.com/uc?export=view&id=1enLvnJDUcAdRDnBI-FDkOwmVuqEouj74"
             )
         ).await()
+    }
+
+    suspend fun addDevice(floorId: String, device: DeviceDto) {
+        db.collection("houses").document(houseId)
+            .collection("floors").document(floorId)
+            .collection("devices")
+            .add(device)
+            .await()
     }
 
     suspend fun updateDeviceState(floorId: String, deviceId: String, state: String) {
@@ -227,11 +233,18 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
         val houses = db.collection("houses")
         
         // Check if data already exists to make it "one-time"
-        val existing = houses.limit(1).get().await()
-        if (!existing.isEmpty) return
+        // val existing = houses.limit(1).get().await()
+        // if (!existing.isEmpty) return
 
-        val houseId = "main-house"
+        //val houseId = "main-house"
         val houseRef = houses.document(houseId)
+
+        val existingHouse = houseRef.get().await()
+
+        if (existingHouse.exists()) {
+            return
+        }
+
         houseRef.set(HouseDto(name = "My Smart Home")).await()
 
         val floors = houseRef.collection("floors")
@@ -242,7 +255,7 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             name = "Ground Floor",
             gridWidth = 10,
             gridHeight = 10,
-            imageUrl = "https://example.com/ground_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=14dM25N1Z4rDP30uVahuYEKj8ND_nuvnb"
         )).await()
 
         val groundDevices = groundFloorRef.collection("devices")
@@ -272,7 +285,7 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             name = "First Floor",
             gridWidth = 10,
             gridHeight = 8,
-            imageUrl = "https://example.com/first_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=1i-o7LUzGsFtGHL8lBc3RPxAVgiL5x9V7"
         )).await()
 
         val firstDevices = firstFloorRef.collection("devices")
@@ -302,9 +315,9 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             name = "Front Door Camera",
             type = "camera",
             state = "ON",
-            positionX = 0.0,
+            positionX = 0.3,
             positionY = 0.1,
-            cameraUri = "https://example.com/camera_snapshot.jpg"
+            cameraUri = "https://drive.google.com/uc?export=view&id=11WyoP0WqxeSJ4jDIQ1W75ISEif5VQepE"
         )).await()
 
         // Seed Usage Logs

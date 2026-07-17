@@ -1,6 +1,8 @@
 package com.example.smarthome.ui.dashboard
 
+import android.util.Log
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.smarthome.R
 import com.example.smarthome.SmartHomeApplication
 import com.example.smarthome.domain.Device
@@ -46,6 +50,8 @@ fun FloorDashboardScreen(
     )
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    var showAddDeviceDialog by remember { mutableStateOf(false) }
+    var pendingCoordinates by remember { mutableStateOf<Pair<Double, Double>?>(null) }
 
     Scaffold(
         topBar = {
@@ -79,6 +85,10 @@ fun FloorDashboardScreen(
                             floor = state.floor,
                             devices = state.devices,
                             onDeviceClick = onDeviceClick,
+                            onMapClick = { x, y ->
+                                pendingCoordinates = x to y
+                                showAddDeviceDialog = true
+                            },
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .weight(1f)
@@ -96,6 +106,166 @@ fun FloorDashboardScreen(
             }
         }
     }
+
+    if (showAddDeviceDialog) {
+        AddDeviceDialog(
+            onDismiss = { showAddDeviceDialog = false },
+            onConfirm = { name, type, cameraUri, switches ->
+                pendingCoordinates?.let { (x, y) ->
+                    viewModel.addDevice(name, type, x, y, cameraUri, switches)
+                }
+                showAddDeviceDialog = false
+            }
+        )
+    }
+}
+
+@Composable
+fun AddDeviceDialog(
+    onDismiss: () -> Unit,
+    onConfirm: (String, String, String?, List<Map<String, Any>>?) -> Unit
+) {
+    var name by remember { mutableStateOf("") }
+    var selectedType by remember { mutableStateOf("outlet") }
+    
+    // Camera state
+    var cameraUri by remember { mutableStateOf("") }
+    
+    // MultiSwitch state
+    var switches by remember { mutableStateOf(listOf<Map<String, Any>>()) }
+    var newSwitchName by remember { mutableStateOf("") }
+    var newSwitchState by remember { mutableStateOf(DeviceState.OFF) }
+
+    val deviceTypes = listOf("iron", "camera", "multiswitch", "bulb", "outlet")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Add New Device") },
+        text = {
+            LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                item {
+                    TextField(
+                        value = name,
+                        onValueChange = { name = it },
+                        label = { Text("Device Name") },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+                
+                item {
+                    Text("Device Type", style = MaterialTheme.typography.labelMedium)
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        deviceTypes.forEach { type ->
+                            FilterChip(
+                                selected = selectedType == type,
+                                onClick = { selectedType = type },
+                                label = { Text(type.replaceFirstChar { it.uppercase() }) }
+                            )
+                        }
+                    }
+                }
+
+                if (selectedType == "camera") {
+                    item {
+                        TextField(
+                            value = cameraUri,
+                            onValueChange = { cameraUri = it },
+                            label = { Text("Camera URI") },
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+                }
+
+                if (selectedType == "multiswitch") {
+                    item {
+                        Text("Switches", style = MaterialTheme.typography.labelMedium)
+                        switches.forEachIndexed { index, sw ->
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text("${sw["name"]} (${sw["state"]})")
+                                IconButton(onClick = {
+                                    switches = switches.toMutableList().apply { removeAt(index) }
+                                }) {
+                                    Icon(Icons.Default.Delete, contentDescription = "Remove")
+                                }
+                            }
+                        }
+                    }
+
+                    item {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            TextField(
+                                value = newSwitchName,
+                                onValueChange = { newSwitchName = it },
+                                label = { Text("Switch Name") },
+                                modifier = Modifier.weight(1f)
+                            )
+                            IconButton(
+                                onClick = {
+                                    if (newSwitchName.isNotBlank()) {
+                                        val newId = "sw${switches.size + 1}"
+                                        switches = switches + mapOf(
+                                            "id" to newId,
+                                            "name" to newSwitchName,
+                                            "state" to newSwitchState.name
+                                        )
+                                        newSwitchName = ""
+                                    }
+                                }
+                            ) {
+                                Icon(Icons.Default.Add, contentDescription = "Add Switch")
+                            }
+                        }
+//                        Row(verticalAlignment = Alignment.CenterVertically) {
+//                            Text("Initial State: ")
+//                            Switch(
+//                                checked = newSwitchState == DeviceState.ON,
+//                                onCheckedChange = {
+//                                    newSwitchState = if (it) DeviceState.ON else DeviceState.OFF
+//                                }
+//                            )
+//                            Text(if (newSwitchState == DeviceState.ON) " ON" else " OFF")
+//                        }
+                    }
+                }
+            }
+        },
+        confirmButton = {
+            val canConfirm = name.isNotBlank() && when (selectedType) {
+                "camera" -> cameraUri.isNotBlank()
+                "multiswitch" -> switches.isNotEmpty()
+                else -> true
+            }
+            TextButton(
+                onClick = {
+                    onConfirm(
+                        name,
+                        selectedType,
+                        if (selectedType == "camera") cameraUri else null,
+                        if (selectedType == "multiswitch") switches else null
+                    )
+                },
+                enabled = canConfirm
+            ) {
+                Text("Add")
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("Cancel")
+            }
+        }
+    )
 }
 
 @Composable
@@ -103,25 +273,73 @@ fun FloorPlanGrid(
     floor: Floor,
     devices: List<Device>,
     onDeviceClick: (Device) -> Unit,
+    onMapClick: (Double, Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    BoxWithConstraints(modifier = modifier.background(MaterialTheme.colorScheme.surfaceVariant)) {
-        AsyncImage(
+    var imageLoaded by remember { mutableStateOf(false) }
+
+    BoxWithConstraints(modifier = modifier
+        .background(MaterialTheme.colorScheme.surfaceVariant)
+        .pointerInput(imageLoaded) {
+            if (imageLoaded) {
+                detectTapGestures { offset ->
+                    val x = (offset.x / size.width).toDouble()
+                    val y = (offset.y / size.height).toDouble()
+
+                    onMapClick(x, y)
+                    Log.d("MyDebug", "x: $x, y: $y")
+                }
+            }
+        }
+    ) {
+        SubcomposeAsyncImage(
             model = floor.imageUrl,
             contentDescription = "Floor Plan",
             modifier = Modifier.fillMaxSize(),
-            contentScale = ContentScale.Fit
-        )
+            contentScale = ContentScale.FillBounds,
 
-        devices.forEach { device ->
-            DevicePin(
-                device = device,
-                onClick = { onDeviceClick(device) },
-                modifier = Modifier.offset(
-                    x = maxWidth * device.position.x - 20.dp,
-                    y = maxHeight * device.position.y - 20.dp
-                )
+            onSuccess = {
+                imageLoaded = true
+            },
+
+            onError = {
+                imageLoaded = false
+            },
+
+            loading = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(24.dp),
+                        color = MaterialTheme.colorScheme.onPrimary,
+                        strokeWidth = 2.dp
+                    )
+                }
+            },
+
+            error = {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Failed to load floor plan")
+                }
+            }
             )
+        Log.d("MyDebug", "image URL: ${floor.imageUrl}")
+        if (imageLoaded) {
+            devices.forEach { device ->
+                DevicePin(
+                    device = device,
+                    onClick = { onDeviceClick(device) },
+                    modifier = Modifier.offset(
+                        x = maxWidth * device.position.x - 20.dp,
+                        y = maxHeight * device.position.y - 20.dp
+                    )
+                )
+            }
         }
     }
 }
@@ -186,7 +404,7 @@ fun DeviceRow(device: Device, onClick: () -> Unit) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = color,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(32.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
@@ -195,7 +413,7 @@ fun DeviceRow(device: Device, onClick: () -> Unit) {
                 Text(
                     text = device.state.name,
                     style = MaterialTheme.typography.bodySmall,
-                    color = color,
+                    color = MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.Bold
                 )
             }
