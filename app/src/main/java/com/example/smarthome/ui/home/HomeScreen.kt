@@ -36,7 +36,19 @@ fun HomeScreen(
                 title = { Text(stringResource(R.string.home_title)) },
                 actions = {
                     IconButton(onClick = onAlertsClick) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Alerts & Usage")
+                        BadgedBox(
+                            badge = {
+                                val successState = uiState as? HomeUiState.Success
+                                if (successState != null && successState.activeAlertCount > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(8.dp)
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts & Usage")
+                        }
                     }
                 }
             )
