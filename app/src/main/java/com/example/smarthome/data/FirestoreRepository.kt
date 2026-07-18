@@ -108,8 +108,8 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
     }
 
     fun getAlerts(): Flow<List<Alert>> = callbackFlow {
-        val listener = db.collection("alerts")
-            .whereEqualTo("houseId", houseId)
+        val listener = db.collection("houses").document(houseId)
+            .collection("alerts")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -140,8 +140,8 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             set(java.util.Calendar.MILLISECOND, 0)
         }.time
 
-        val listener = db.collection("usageLogs")
-            .whereEqualTo("houseId", houseId)
+        val listener = db.collection("houses").document(houseId)
+            .collection("usageLogs")
             .whereGreaterThanOrEqualTo("timestamp", Timestamp(startOfDay))
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->

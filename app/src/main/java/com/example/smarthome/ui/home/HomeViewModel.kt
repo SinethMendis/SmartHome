@@ -21,10 +21,10 @@ import kotlinx.coroutines.launch
 class HomeViewModel(private val repository: FirestoreRepository) : ViewModel() {
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    val uiState: StateFlow<HomeUiState> = repository.getFloors()
-        .flatMapLatest { floors ->
+    val uiState: StateFlow<HomeUiState> = combine(
+        repository.getFloors().flatMapLatest { floors ->
             if (floors.isEmpty()) {
-                flowOf(HomeUiState.Success(emptyList()))
+                flowOf(emptyList())
             } else {
                 val floorFlows = floors.map { floor ->
                     repository.getDevices(floor.id).map { devices ->
@@ -34,11 +34,18 @@ class HomeViewModel(private val repository: FirestoreRepository) : ViewModel() {
                         )
                     }
                 }
-                combine(floorFlows) { updatedFloors ->
-                    HomeUiState.Success(updatedFloors.toList()) as HomeUiState
-                }
+                combine(floorFlows) { it.toList() }
             }
+        },
+        repository.getAlerts().map { alerts ->
+            alerts.count { !it.acknowledged }
         }
+    ) { updatedFloors, alertCount ->
+        HomeUiState.Success(
+            floors = updatedFloors,
+            activeAlertCount = alertCount
+        ) as HomeUiState
+    }
         .catch { e -> emit(HomeUiState.Error(e.message ?: "Unknown error")) }
         .stateIn(
             scope = viewModelScope,

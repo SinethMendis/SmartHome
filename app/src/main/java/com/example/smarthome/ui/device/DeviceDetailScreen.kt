@@ -176,7 +176,9 @@ fun OutletControls(device: Device.Outlet, viewModel: DeviceDetailViewModel) {
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(2f)
+        modifier = Modifier.scale(2f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
 }
 
@@ -185,7 +187,9 @@ fun MultiSwitchControls(device: Device.MultiSwitch, viewModel: DeviceDetailViewM
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(1.5f)
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
     Spacer(modifier = Modifier.height(32.dp))
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -240,10 +244,16 @@ fun IronControls(device: Device.Iron, viewModel: DeviceDetailViewModel) {
         ) {
             Text("TURN OFF NOW")
         }
-    } else {
+    } else if (device.state == DeviceState.OFF) {
         Button(onClick = { viewModel.toggleDeviceState(device.state) }) {
             Text("TURN ON")
         }
+    } else {
+            Text(
+                text = "Failed to connect the device",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyLarge
+            )
     }
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -265,7 +275,9 @@ fun BulbControls(
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(1.5f)
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
     Spacer(modifier = Modifier.height(32.dp))
     
@@ -309,7 +321,9 @@ fun CameraControls(
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(1.5f)
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
 
     Spacer(modifier = Modifier.height(32.dp))
