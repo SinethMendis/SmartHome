@@ -127,7 +127,8 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
     }
 
     suspend fun acknowledgeAlert(alertId: String) {
-        db.collection("alerts").document(alertId)
+        db.collection("houses").document(houseId)
+            .collection("alerts").document(alertId)
             .update("acknowledged", true)
             .await()
     }
@@ -294,7 +295,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             name = "Bedroom Iron",
             type = "iron",
             state = "OFF",
-            positionX = 0.8,
+            positionX = 0.6,
             positionY = 0.2,
             maxOnDurationMin = 30
         )).await()
@@ -321,7 +322,8 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         )).await()
 
         // Seed Usage Logs
-        db.collection("usageLogs").add(UsageLogDto(
+        db.collection("houses").document(houseId)
+            .collection("usageLogs").add(UsageLogDto(
             houseId = houseId,
             deviceId = outletId,
             deviceName = "Living Room Outlet",
@@ -330,7 +332,8 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         )).await()
 
         // Seed Alerts
-        db.collection("alerts").add(AlertDto(
+        db.collection("houses").document(houseId)
+            .collection("alerts").add(AlertDto(
             houseId = houseId,
             deviceId = ironId,
             deviceName = "Bedroom Iron",
