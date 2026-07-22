@@ -233,6 +233,12 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
     suspend fun seedDatabase() {
         val houses = db.collection("houses")
         
+        fun getPastTime(minutesAgo: Int): Timestamp {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.MINUTE, -minutesAgo)
+            return Timestamp(cal.time)
+        }
+
         // Check if data already exists to make it "one-time"
         // val existing = houses.limit(1).get().await()
         // if (!existing.isEmpty) return
@@ -280,6 +286,15 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             scheduleEnd = "06:00"
         )).await()
 
+        groundDevices.document("bedroom-bulb").set(DeviceDto(
+            name = "Bedroom Bulb",
+            type = "bulb",
+            state = "OFF",
+            positionX = 0.8,
+            positionY = 0.68,
+            scheduleEnabled = false,
+        )).await()
+
         // First Floor
         val firstFloorRef = floors.document("first-floor")
         firstFloorRef.set(FloorDto(
@@ -294,10 +309,11 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         firstDevices.document(ironId).set(DeviceDto(
             name = "Bedroom Iron",
             type = "iron",
-            state = "OFF",
+            state = "ON",
             positionX = 0.6,
             positionY = 0.2,
-            maxOnDurationMin = 30
+            maxOnDurationMin = 30,
+            turnedOnAt = getPastTime(20)
         )).await()
 
         firstDevices.document("hallway-multi").set(DeviceDto(
@@ -322,14 +338,24 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         )).await()
 
         // Seed Usage Logs
-        db.collection("houses").document(houseId)
-            .collection("usageLogs").add(UsageLogDto(
-            houseId = houseId,
-            deviceId = outletId,
-            deviceName = "Living Room Outlet",
-            event = "OFF",
-            timestamp = Timestamp.now()
-        )).await()
+        val usageLogs = db.collection("houses").document(houseId).collection("usageLogs")
+
+        // Outlet usage: 45 mins
+        usageLogs.add(UsageLogDto(houseId, outletId, "Living Room Outlet", "ON", getPastTime(120))).await()
+        usageLogs.add(UsageLogDto(houseId, outletId, "Living Room Outlet", "OFF", getPastTime(75))).await()
+
+        // Bedroom Bulb usage: 120 mins
+        usageLogs.add(UsageLogDto(houseId, "bedroom-bulb", "Bedroom Bulb", "ON", getPastTime(300))).await()
+        usageLogs.add(UsageLogDto(houseId, "bedroom-bulb", "Bedroom Bulb", "OFF", getPastTime(180))).await()
+
+        // Kitchen Light usage: Started 4 hours ago and still ON
+        // usageLogs.add(UsageLogDto(houseId, "kitchen-light", "Kitchen Light", "ON", getPastTime(240))).await()
+
+        // Iron usage: 20 mins (and currently ON)
+        usageLogs.add(UsageLogDto(houseId, ironId, "Bedroom Iron", "ON", getPastTime(20))).await()
+
+        // Hallway Main Light usage: Started 1 hour ago and still ON
+        usageLogs.add(UsageLogDto(houseId, "hallway-multi-sw1", "Hallway Main Light", "ON", getPastTime(60))).await()
 
         // Seed Alerts
         db.collection("houses").document(houseId)
