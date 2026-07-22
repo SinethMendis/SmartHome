@@ -355,7 +355,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
         usageLogs.add(UsageLogDto(houseId, ironId, "Bedroom Iron", "ON", getPastTime(20))).await()
 
         // Hallway Main Light usage: Started 1 hour ago and still ON
-        usageLogs.add(UsageLogDto(houseId, "hallway-multi-sw1", "Hallway Main Light", "ON", getPastTime(60))).await()
+        usageLogs.add(UsageLogDto(houseId, "hallway-multi", "Hallway Switches : Main Light", "ON", getPastTime(60))).await()
 
         // Seed Alerts
         db.collection("houses").document(houseId)
