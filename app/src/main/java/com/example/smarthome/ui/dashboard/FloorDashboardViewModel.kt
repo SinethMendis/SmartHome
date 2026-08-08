@@ -59,7 +59,7 @@ class FloorDashboardViewModel(
                         type = type,
                         positionX = x,
                         positionY = y,
-                        cameraUri = "https://drive.google.com/uc?export=view&id=11WyoP0WqxeSJ4jDIQ1W75ISEif5VQepE"
+                        cameraUri = "https://smart-home-monitor-c8015.web.app/assets/mock-camera-2.jpg?t=1786212321467"
                     )
                     "iron" -> DeviceDto(
                         name = name,

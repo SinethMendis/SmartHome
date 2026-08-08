@@ -334,7 +334,7 @@ class FirestoreRepository(private val db: FirebaseFirestore, private val houseId
             state = "ON",
             positionX = 0.3,
             positionY = 0.1,
-            cameraUri = "https://drive.google.com/uc?export=view&id=11WyoP0WqxeSJ4jDIQ1W75ISEif5VQepE"
+            cameraUri = "https://smart-home-monitor-c8015.web.app/assets/mock-camera-2.jpg?t=1786212321467"
         )).await()
 
         // Seed Usage Logs
