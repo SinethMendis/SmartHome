@@ -55,7 +55,12 @@ fun DeviceDto.toDomain(id: String): Device {
     }
 }
 
-fun FloorDto.toDomain(id: String, deviceCount: Int = 0, activeAlertCount: Int = 0): Floor {
+fun FloorDto.toDomain(
+    id: String,
+    deviceCount: Int = 0,
+    activeDeviceCount: Int = 0,
+    activeAlertCount: Int = 0
+): Floor {
     return Floor(
         id = id,
         name = name,
@@ -63,6 +68,7 @@ fun FloorDto.toDomain(id: String, deviceCount: Int = 0, activeAlertCount: Int = 
         gridHeight = gridHeight,
         imageUrl = imageUrl,
         deviceCount = deviceCount,
+        activeDeviceCount = activeDeviceCount,
         activeAlertCount = activeAlertCount
     )
 }

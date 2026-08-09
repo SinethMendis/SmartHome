@@ -1,9 +1,11 @@
 package com.example.smarthome.ui.alerts
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
@@ -24,7 +26,6 @@ import com.example.smarthome.R
 import com.example.smarthome.domain.Alert
 import com.example.smarthome.ui.components.ErrorScreen
 import com.example.smarthome.ui.components.LoadingScreen
-import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
@@ -146,7 +147,6 @@ fun AlertCard(alert: Alert, onClick: () -> Unit) {
         }
     }
 }
-
 @Composable
 fun UsageChart(
     usageData: List<DeviceUsage>,
@@ -160,49 +160,136 @@ fun UsageChart(
     }
 
     val maxMinutes = usageData.maxOf { it.totalMinutes }.coerceAtLeast(1).toFloat()
-    val barColor = MaterialTheme.colorScheme.primary
-    val textColor = MaterialTheme.colorScheme.onSurface.toArgb()
+    val labelColor = android.graphics.Color.BLACK
 
-    Canvas(modifier = modifier) {
-        val spacing = 20.dp.toPx()
-        val barWidth = (size.width - (spacing * (usageData.size + 1))) / usageData.size
-        
-        usageData.forEachIndexed { index, device ->
-            val barHeight = (device.totalMinutes / maxMinutes) * (size.height - 40.dp.toPx())
-            val x = spacing + index * (barWidth + spacing)
-            val y = size.height - barHeight - 20.dp.toPx()
+    Box(modifier = modifier.horizontalScroll(rememberScrollState())) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxHeight()
+                .width((usageData.size * 60).dp)
+                .padding(bottom = 40.dp, top = 20.dp) // more room for 2-line labels
+        ) {
+            val spacing = 12.dp.toPx()
+            val availableWidth = size.width - spacing
+            val barWidth = (availableWidth / usageData.size) - spacing
 
-            drawRect(
-                color = barColor,
-                topLeft = Offset(x, y),
-                size = Size(barWidth, barHeight)
-            )
+            val labelPaint = android.graphics.Paint().apply {
+                color = labelColor
+                textSize = 10.sp.toPx()
+                textAlign = android.graphics.Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            val valuePaint = android.graphics.Paint().apply {
+                color = labelColor
+                textSize = 11.sp.toPx()
+                textAlign = android.graphics.Paint.Align.CENTER
+                isFakeBoldText = true
+            }
+            val lineHeight = labelPaint.textSize + 2.dp.toPx()
 
-            // Label
-            drawContext.canvas.nativeCanvas.drawText(
-                device.deviceName.take(6),
-                x + barWidth / 2,
-                size.height,
-                android.graphics.Paint().apply {
-                    color = textColor
-                    textSize = 12.sp.toPx()
-                    textAlign = android.graphics.Paint.Align.CENTER
+            usageData.forEachIndexed { index, device ->
+                val ratio = device.totalMinutes.toFloat() / maxMinutes
+                val barHeight = ratio * size.height
+                val x = spacing + index * (barWidth + spacing)
+                val y = size.height - barHeight
+
+                val statusColor = when {
+                    ratio < 0.33f -> Color(0xFF4CAF50)
+                    ratio < 0.66f -> Color(0xFFFFA000)
+                    else -> Color(0xFFF44336)
                 }
-            )
 
-            // Value
-            drawContext.canvas.nativeCanvas.drawText(
-                device.totalMinutes.toString(),
-                x + barWidth / 2,
-                y - 5.dp.toPx(),
-                android.graphics.Paint().apply {
-                    color = textColor
-                    textSize = 10.sp.toPx()
-                    textAlign = android.graphics.Paint.Align.CENTER
+                drawRect(
+                    color = statusColor,
+                    topLeft = Offset(x, y),
+                    size = Size(barWidth, barHeight)
+                )
+
+                // Wrap label into lines no wider than barWidth, max 2 lines
+                val lines = wrapTextToWidth(
+                    text = device.deviceName,
+                    paint = labelPaint,
+                    maxWidth = barWidth,
+                    maxLines = 2
+                )
+                lines.forEachIndexed { lineIndex, line ->
+                    drawContext.canvas.nativeCanvas.drawText(
+                        line,
+                        x + barWidth / 2,
+                        size.height + 16.dp.toPx() + lineIndex * lineHeight,
+                        labelPaint
+                    )
                 }
-            )
+
+                drawContext.canvas.nativeCanvas.drawText(
+                    "${device.totalMinutes}m",
+                    x + barWidth / 2,
+                    y - 8.dp.toPx(),
+                    valuePaint
+                )
+            }
         }
     }
+}
+
+private fun wrapTextToWidth(
+    text: String,
+    paint: android.graphics.Paint,
+    maxWidth: Float,
+    maxLines: Int
+): List<String> {
+    if (text.isEmpty()) return emptyList()
+
+    val words = text.split(" ")
+    val lines = mutableListOf<String>()
+    var current = StringBuilder()
+
+    fun flushCurrent() {
+        if (current.isNotEmpty()) {
+            lines.add(current.toString())
+            current = StringBuilder()
+        }
+    }
+
+    for (word in words) {
+        val candidate = if (current.isEmpty()) word else "${current} $word"
+        if (paint.measureText(candidate) <= maxWidth) {
+            current = StringBuilder(candidate)
+        } else {
+            if (current.isEmpty()) {
+                var chars = StringBuilder()
+                for (c in word) {
+                    val test = chars.toString() + c
+                    if (paint.measureText(test) <= maxWidth) {
+                        chars.append(c)
+                    } else {
+                        lines.add(chars.toString())
+                        chars = StringBuilder().append(c)
+                        if (lines.size == maxLines) break
+                    }
+                }
+                current = chars
+            } else {
+                flushCurrent()
+                current = StringBuilder(word)
+            }
+        }
+        if (lines.size == maxLines) break
+    }
+    if (lines.size < maxLines) flushCurrent()
+
+    val consumedLength = lines.joinToString(" ").length
+    if (lines.size == maxLines && consumedLength < text.length) {
+        var lastLine = lines.last()
+        while (lastLine.isNotEmpty() &&
+            paint.measureText("$lastLine…") > maxWidth
+        ) {
+            lastLine = lastLine.dropLast(1)
+        }
+        lines[lines.lastIndex] = "$lastLine…"
+    }
+
+    return lines.take(maxLines)
 }
 
 private fun Color.toArgb(): Int {

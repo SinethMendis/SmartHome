@@ -36,7 +36,19 @@ fun HomeScreen(
                 title = { Text(stringResource(R.string.home_title)) },
                 actions = {
                     IconButton(onClick = onAlertsClick) {
-                        Icon(Icons.Default.Notifications, contentDescription = "Alerts & Usage")
+                        BadgedBox(
+                            badge = {
+                                val successState = uiState as? HomeUiState.Success
+                                if (successState != null && successState.activeAlertCount > 0) {
+                                    Badge(
+                                        containerColor = MaterialTheme.colorScheme.error,
+                                        modifier = Modifier.size(8.dp)
+                                    )
+                                }
+                            }
+                        ) {
+                            Icon(Icons.Default.Notifications, contentDescription = "Alerts & Usage")
+                        }
                     }
                 }
             )
@@ -132,9 +144,21 @@ fun FloorCard(floor: Floor, onClick: () -> Unit) {
             Text(text = floor.name, style = MaterialTheme.typography.titleLarge)
             Spacer(modifier = Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                Text(text = "Devices: ${floor.deviceCount}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    text = "Devices: ${floor.deviceCount}",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Text(
+                    text = "Active: ${floor.activeDeviceCount}",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (floor.activeDeviceCount > 0) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 if (floor.activeAlertCount > 0) {
-                    Text(text = "Alerts: ${floor.activeAlertCount}", color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        text = "Alerts: ${floor.activeAlertCount}",
+                        color = MaterialTheme.colorScheme.error,
+                        style = MaterialTheme.typography.bodyMedium
+                    )
                 }
             }
         }

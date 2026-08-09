@@ -18,9 +18,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class FirestoreRepository(private val db: FirebaseFirestore) {
-
-    private val houseId = "main-house"
+class FirestoreRepository(private val db: FirebaseFirestore, private val houseId: String) {
 
     fun getHouse(): Flow<House?> = callbackFlow {
         val listener = db.collection("houses").document(houseId)
@@ -110,8 +108,8 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
     }
 
     fun getAlerts(): Flow<List<Alert>> = callbackFlow {
-        val listener = db.collection("alerts")
-            .whereEqualTo("houseId", houseId)
+        val listener = db.collection("houses").document(houseId)
+            .collection("alerts")
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
@@ -129,7 +127,8 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
     }
 
     suspend fun acknowledgeAlert(alertId: String) {
-        db.collection("alerts").document(alertId)
+        db.collection("houses").document(houseId)
+            .collection("alerts").document(alertId)
             .update("acknowledged", true)
             .await()
     }
@@ -142,8 +141,8 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             set(java.util.Calendar.MILLISECOND, 0)
         }.time
 
-        val listener = db.collection("usageLogs")
-            .whereEqualTo("houseId", houseId)
+        val listener = db.collection("houses").document(houseId)
+            .collection("usageLogs")
             .whereGreaterThanOrEqualTo("timestamp", Timestamp(startOfDay))
             .orderBy("timestamp", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
@@ -168,9 +167,17 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
                 name = name,
                 gridWidth = gridWidth,
                 gridHeight = gridHeight,
-                imageUrl = imageUrl
+                imageUrl = "https://drive.google.com/uc?export=view&id=1enLvnJDUcAdRDnBI-FDkOwmVuqEouj74"
             )
         ).await()
+    }
+
+    suspend fun addDevice(floorId: String, device: DeviceDto) {
+        db.collection("houses").document(houseId)
+            .collection("floors").document(floorId)
+            .collection("devices")
+            .add(device)
+            .await()
     }
 
     suspend fun updateDeviceState(floorId: String, deviceId: String, state: String) {
@@ -226,12 +233,25 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
     suspend fun seedDatabase() {
         val houses = db.collection("houses")
         
-        // Check if data already exists to make it "one-time"
-        val existing = houses.limit(1).get().await()
-        if (!existing.isEmpty) return
+        fun getPastTime(minutesAgo: Int): Timestamp {
+            val cal = java.util.Calendar.getInstance()
+            cal.add(java.util.Calendar.MINUTE, -minutesAgo)
+            return Timestamp(cal.time)
+        }
 
-        val houseId = "main-house"
+        // Check if data already exists to make it "one-time"
+        // val existing = houses.limit(1).get().await()
+        // if (!existing.isEmpty) return
+
+        //val houseId = "main-house"
         val houseRef = houses.document(houseId)
+
+        val existingHouse = houseRef.get().await()
+
+        if (existingHouse.exists()) {
+            return
+        }
+
         houseRef.set(HouseDto(name = "My Smart Home")).await()
 
         val floors = houseRef.collection("floors")
@@ -242,7 +262,7 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             name = "Ground Floor",
             gridWidth = 10,
             gridHeight = 10,
-            imageUrl = "https://example.com/ground_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=14dM25N1Z4rDP30uVahuYEKj8ND_nuvnb"
         )).await()
 
         val groundDevices = groundFloorRef.collection("devices")
@@ -266,13 +286,22 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             scheduleEnd = "06:00"
         )).await()
 
+        groundDevices.document("bedroom-bulb").set(DeviceDto(
+            name = "Bedroom Bulb",
+            type = "bulb",
+            state = "OFF",
+            positionX = 0.8,
+            positionY = 0.68,
+            scheduleEnabled = false,
+        )).await()
+
         // First Floor
         val firstFloorRef = floors.document("first-floor")
         firstFloorRef.set(FloorDto(
             name = "First Floor",
             gridWidth = 10,
             gridHeight = 8,
-            imageUrl = "https://example.com/first_floor.png"
+            imageUrl = "https://drive.google.com/uc?export=view&id=1i-o7LUzGsFtGHL8lBc3RPxAVgiL5x9V7"
         )).await()
 
         val firstDevices = firstFloorRef.collection("devices")
@@ -280,10 +309,11 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
         firstDevices.document(ironId).set(DeviceDto(
             name = "Bedroom Iron",
             type = "iron",
-            state = "OFF",
-            positionX = 0.8,
+            state = "ON",
+            positionX = 0.6,
             positionY = 0.2,
-            maxOnDurationMin = 30
+            maxOnDurationMin = 30,
+            turnedOnAt = getPastTime(20)
         )).await()
 
         firstDevices.document("hallway-multi").set(DeviceDto(
@@ -302,22 +332,34 @@ class FirestoreRepository(private val db: FirebaseFirestore) {
             name = "Front Door Camera",
             type = "camera",
             state = "ON",
-            positionX = 0.0,
+            positionX = 0.3,
             positionY = 0.1,
-            cameraUri = "https://example.com/camera_snapshot.jpg"
+            cameraUri = "https://smart-home-monitor-c8015.web.app/assets/mock-camera-2.jpg?t=1786212321467"
         )).await()
 
         // Seed Usage Logs
-        db.collection("usageLogs").add(UsageLogDto(
-            houseId = houseId,
-            deviceId = outletId,
-            deviceName = "Living Room Outlet",
-            event = "OFF",
-            timestamp = Timestamp.now()
-        )).await()
+        val usageLogs = db.collection("houses").document(houseId).collection("usageLogs")
+
+        // Outlet usage: 45 mins
+        usageLogs.add(UsageLogDto(houseId, outletId, "Living Room Outlet", "ON", getPastTime(120))).await()
+        usageLogs.add(UsageLogDto(houseId, outletId, "Living Room Outlet", "OFF", getPastTime(75))).await()
+
+        // Bedroom Bulb usage: 120 mins
+        usageLogs.add(UsageLogDto(houseId, "bedroom-bulb", "Bedroom Bulb", "ON", getPastTime(300))).await()
+        usageLogs.add(UsageLogDto(houseId, "bedroom-bulb", "Bedroom Bulb", "OFF", getPastTime(180))).await()
+
+        // Kitchen Light usage: Started 4 hours ago and still ON
+        // usageLogs.add(UsageLogDto(houseId, "kitchen-light", "Kitchen Light", "ON", getPastTime(240))).await()
+
+        // Iron usage: 20 mins (and currently ON)
+        usageLogs.add(UsageLogDto(houseId, ironId, "Bedroom Iron", "ON", getPastTime(20))).await()
+
+        // Hallway Main Light usage: Started 1 hour ago and still ON
+        usageLogs.add(UsageLogDto(houseId, "hallway-multi", "Hallway Switches : Main Light", "ON", getPastTime(60))).await()
 
         // Seed Alerts
-        db.collection("alerts").add(AlertDto(
+        db.collection("houses").document(houseId)
+            .collection("alerts").add(AlertDto(
             houseId = houseId,
             deviceId = ironId,
             deviceName = "Bedroom Iron",

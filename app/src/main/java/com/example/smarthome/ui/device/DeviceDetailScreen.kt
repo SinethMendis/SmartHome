@@ -1,11 +1,13 @@
 package com.example.smarthome.ui.device
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.VideocamOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -18,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
 import com.example.smarthome.SmartHomeApplication
 import com.example.smarthome.domain.Device
 import com.example.smarthome.domain.DeviceState
@@ -134,7 +137,7 @@ fun DeviceDetailContent(
             is Device.MultiSwitch -> MultiSwitchControls(device, viewModel)
             is Device.Iron -> IronControls(device, viewModel)
             is Device.Bulb -> BulbControls(device, viewModel, onTimeClick)
-            is Device.Camera -> CameraControls(device)
+            is Device.Camera -> CameraControls(device, viewModel)
         }
     }
 }
@@ -173,12 +176,22 @@ fun OutletControls(device: Device.Outlet, viewModel: DeviceDetailViewModel) {
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(2f)
+        modifier = Modifier.scale(2f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
 }
 
 @Composable
 fun MultiSwitchControls(device: Device.MultiSwitch, viewModel: DeviceDetailViewModel) {
+    Switch(
+        checked = device.state == DeviceState.ON,
+        onCheckedChange = { viewModel.toggleDeviceState(device.state) },
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
+    )
+    Spacer(modifier = Modifier.height(32.dp))
     LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
         items(device.switches) { sub ->
             Card(modifier = Modifier.fillMaxWidth()) {
@@ -231,10 +244,16 @@ fun IronControls(device: Device.Iron, viewModel: DeviceDetailViewModel) {
         ) {
             Text("TURN OFF NOW")
         }
-    } else {
+    } else if (device.state == DeviceState.OFF) {
         Button(onClick = { viewModel.toggleDeviceState(device.state) }) {
             Text("TURN ON")
         }
+    } else {
+            Text(
+                text = "Failed to connect the device",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodyLarge
+            )
     }
 
     Spacer(modifier = Modifier.height(32.dp))
@@ -256,7 +275,9 @@ fun BulbControls(
     Switch(
         checked = device.state == DeviceState.ON,
         onCheckedChange = { viewModel.toggleDeviceState(device.state) },
-        modifier = Modifier.scale(1.5f)
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
     )
     Spacer(modifier = Modifier.height(32.dp))
     
@@ -291,20 +312,69 @@ fun BulbControls(
 }
 
 @Composable
-fun CameraControls(device: Device.Camera) {
+fun CameraControls(
+    device: Device.Camera,
+    viewModel: DeviceDetailViewModel
+) {
     var timestamp by remember { mutableStateOf(System.currentTimeMillis()) }
-    
+
+    Switch(
+        checked = device.state == DeviceState.ON,
+        onCheckedChange = { viewModel.toggleDeviceState(device.state) },
+        modifier = Modifier.scale(1.5f),
+        enabled = device.state != DeviceState.DISCONNECTED &&
+                device.state != DeviceState.ERROR
+    )
+
+    Spacer(modifier = Modifier.height(32.dp))
+
     Card(modifier = Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            AsyncImage(
-                model = "${device.cameraUri}?t=$timestamp",
-                contentDescription = "Camera Feed",
-                modifier = Modifier.fillMaxWidth().height(240.dp),
-                contentScale = ContentScale.Crop
-            )
-            IconButton(onClick = { timestamp = System.currentTimeMillis() }) {
-                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+            if (device.state == DeviceState.ON) {
+                SubcomposeAsyncImage(
+                    model = device.cameraUri,
+                    contentDescription = "Camera Feed",
+                    modifier = Modifier.fillMaxWidth().height(240.dp),
+                    contentScale = ContentScale.Crop,
+                    loading = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    },
+
+                    error = {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text("Failed to load floor plan")
+                        }
+                    }
+                )
+            } else {
+                Box(
+                    modifier = Modifier.fillMaxWidth().height(240.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VideocamOff,
+                        contentDescription = "Camera Off",
+                        modifier = Modifier.size(64.dp),
+                        tint = MaterialTheme.colorScheme.outline
+                    )
+                }
             }
+            Log.d("MyDebug", "CameraControls: ${device.cameraUri}")
+//            IconButton(onClick = { timestamp = System.currentTimeMillis() }) {
+//                Icon(Icons.Default.Refresh, contentDescription = "Refresh")
+//            }
         }
     }
 }

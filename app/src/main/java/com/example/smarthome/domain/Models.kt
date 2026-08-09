@@ -68,6 +68,7 @@ data class Floor(
     val gridHeight: Int,
     val imageUrl: String,
     val deviceCount: Int = 0,
+    val activeDeviceCount: Int = 0,
     val activeAlertCount: Int = 0
 )
 
