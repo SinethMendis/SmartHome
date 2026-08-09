@@ -160,7 +160,7 @@ fun UsageChart(
     }
 
     val maxMinutes = usageData.maxOf { it.totalMinutes }.coerceAtLeast(1).toFloat()
-    val primaryColor = MaterialTheme.colorScheme.secondary.toArgb()
+    val labelColor = android.graphics.Color.BLACK
 
     Box(modifier = modifier.horizontalScroll(rememberScrollState())) {
         Canvas(
@@ -174,13 +174,13 @@ fun UsageChart(
             val barWidth = (availableWidth / usageData.size) - spacing
 
             val labelPaint = android.graphics.Paint().apply {
-                color = primaryColor
+                color = labelColor
                 textSize = 10.sp.toPx()
                 textAlign = android.graphics.Paint.Align.CENTER
                 isFakeBoldText = true
             }
             val valuePaint = android.graphics.Paint().apply {
-                color = primaryColor
+                color = labelColor
                 textSize = 11.sp.toPx()
                 textAlign = android.graphics.Paint.Align.CENTER
                 isFakeBoldText = true
