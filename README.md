@@ -363,7 +363,7 @@ This data demonstrates all device types and patterns; it can be cleared by delet
 |---|---|
 | Sineth Mendis | Lead developer — Firebase integration, repository, app architecture |
 | Bihansa | Mobile application UI — screens, navigation, device detail screens |
-| _[Name]_ | Hardware simulator, cross-client sync validation, safety automation |
+| Thisas Hansana | Hardware simulator, cross-client sync validation, safety automation |
 
 ## Submission Deliverables
 
