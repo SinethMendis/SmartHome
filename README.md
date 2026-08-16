@@ -368,9 +368,9 @@ This data demonstrates all device types and patterns; it can be cleared by delet
 ## Submission Deliverables
 
 - ✅ **Source code:** This repository
-- ⬜ **Final APK:** _[add link]_
-- ⬜ **Technical documentation:** _[add link]_
-- ⬜ **Recorded demonstration video:** _[add link]_
+- ⬜ **Final APK:** https://drive.google.com/file/d/10oRX1Fjb2xjj00WyF8IrIUUWyMV_Pnpi/view?usp=sharing
+- ⬜ **Technical documentation:** https://drive.google.com/file/d/1oK8ocUvDfYkmJVvyzUPi4-CdHWThVa-o/view?usp=sharing
+- ⬜ **Recorded demonstration video:** https://drive.google.com/file/d/1LSU64D30j2PsApPMjC44Agk7LfHEAE6Q/view?usp=sharing  
 
 ## Development Tips
 
